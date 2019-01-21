@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,18 @@
 
 package org.springframework.boot.actuate.autoconfigure.metrics.export.elastic;
 
-import java.util.Map;
-
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.elastic.ElasticConfig;
 import io.micrometer.elastic.ElasticMeterRegistry;
 import org.junit.Test;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link ElasticMetricsExportAutoConfiguration}.
@@ -90,25 +84,12 @@ public class ElasticMetricsExportAutoConfigurationTests {
 	public void stopsMeterRegistryWhenContextIsClosed() {
 		this.contextRunner.withUserConfiguration(BaseConfiguration.class)
 				.run((context) -> {
-					ElasticMeterRegistry registry = spyOnDisposableBean(
-							ElasticMeterRegistry.class, context);
+					ElasticMeterRegistry registry = context
+							.getBean(ElasticMeterRegistry.class);
+					assertThat(registry.isClosed()).isFalse();
 					context.close();
-					verify(registry).stop();
+					assertThat(registry.isClosed()).isTrue();
 				});
-	}
-
-	@SuppressWarnings("unchecked")
-	private <T> T spyOnDisposableBean(Class<T> type,
-			AssertableApplicationContext context) {
-		String[] names = context.getBeanNamesForType(type);
-		assertThat(names).hasSize(1);
-		String registryBeanName = names[0];
-		Map<String, Object> disposableBeans = (Map<String, Object>) ReflectionTestUtils
-				.getField(context.getAutowireCapableBeanFactory(), "disposableBeans");
-		Object registryAdapter = disposableBeans.get(registryBeanName);
-		T registry = (T) spy(ReflectionTestUtils.getField(registryAdapter, "bean"));
-		ReflectionTestUtils.setField(registryAdapter, "bean", registry);
-		return registry;
 	}
 
 	@Configuration
@@ -127,7 +108,7 @@ public class ElasticMetricsExportAutoConfigurationTests {
 
 		@Bean
 		public ElasticConfig customConfig() {
-			return (k) -> null;
+			return (key) -> null;
 		}
 
 	}

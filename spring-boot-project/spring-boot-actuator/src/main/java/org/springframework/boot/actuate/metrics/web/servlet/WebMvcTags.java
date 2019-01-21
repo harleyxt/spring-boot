@@ -26,6 +26,7 @@ import io.micrometer.core.instrument.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.util.pattern.PathPattern;
 
 /**
  * Factory methods for {@link Tag Tags} associated with a request-response exchange that
@@ -38,6 +39,8 @@ import org.springframework.web.servlet.HandlerMapping;
  * @since 2.0.0
  */
 public final class WebMvcTags {
+
+	private static final String DATA_REST_PATH_PATTERN_ATTRIBUTE = "org.springframework.data.rest.webmvc.RepositoryRestHandlerMapping.EFFECTIVE_REPOSITORY_RESOURCE_LOOKUP_PATH";
 
 	private static final Tag URI_NOT_FOUND = Tag.of("uri", "NOT_FOUND");
 
@@ -109,13 +112,15 @@ public final class WebMvcTags {
 			if (pattern != null) {
 				return Tag.of("uri", pattern);
 			}
-			else if (response != null) {
+			if (response != null) {
 				HttpStatus status = extractStatus(response);
-				if (status != null && status.is3xxRedirection()) {
-					return URI_REDIRECTION;
-				}
-				if (status != null && status.equals(HttpStatus.NOT_FOUND)) {
-					return URI_NOT_FOUND;
+				if (status != null) {
+					if (status.is3xxRedirection()) {
+						return URI_REDIRECTION;
+					}
+					if (status == HttpStatus.NOT_FOUND) {
+						return URI_NOT_FOUND;
+					}
 				}
 			}
 			String pathInfo = getPathInfo(request);
@@ -136,6 +141,11 @@ public final class WebMvcTags {
 	}
 
 	private static String getMatchingPattern(HttpServletRequest request) {
+		PathPattern dataRestPathPattern = (PathPattern) request
+				.getAttribute(DATA_REST_PATH_PATTERN_ATTRIBUTE);
+		if (dataRestPathPattern != null) {
+			return dataRestPathPattern.getPatternString();
+		}
 		return (String) request
 				.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
 	}
@@ -163,24 +173,27 @@ public final class WebMvcTags {
 	}
 
 	/**
-	 * Creates a {@code outcome} tag based on the status of the given {@code response}.
+	 * Creates an {@code outcome} tag based on the status of the given {@code response}.
 	 * @param response the HTTP response
 	 * @return the outcome tag derived from the status of the response
+	 * @since 2.1.0
 	 */
 	public static Tag outcome(HttpServletResponse response) {
 		if (response != null) {
-			int status = response.getStatus();
-			if (status < 200) {
-				return OUTCOME_INFORMATIONAL;
-			}
-			if (status < 300) {
-				return OUTCOME_SUCCESS;
-			}
-			if (status < 400) {
-				return OUTCOME_REDIRECTION;
-			}
-			else if (status < 500) {
-				return OUTCOME_CLIENT_ERROR;
+			HttpStatus status = extractStatus(response);
+			if (status != null) {
+				if (status.is1xxInformational()) {
+					return OUTCOME_INFORMATIONAL;
+				}
+				if (status.is2xxSuccessful()) {
+					return OUTCOME_SUCCESS;
+				}
+				if (status.is3xxRedirection()) {
+					return OUTCOME_REDIRECTION;
+				}
+				if (status.is4xxClientError()) {
+					return OUTCOME_CLIENT_ERROR;
+				}
 			}
 			return OUTCOME_SERVER_ERROR;
 		}

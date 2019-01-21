@@ -99,17 +99,15 @@ final class BindConverter {
 				new ResolvableTypeDescriptor(type, annotations));
 	}
 
-	public static BindConverter get(ConversionService conversionService,
+	static BindConverter get(ConversionService conversionService,
 			Consumer<PropertyEditorRegistry> propertyEditorInitializer) {
 		if (conversionService == ApplicationConversionService.getSharedInstance()
 				&& propertyEditorInitializer == null) {
-			BindConverter instance = sharedInstance;
-			if (instance == null) {
-				instance = new BindConverter(conversionService,
+			if (sharedInstance == null) {
+				sharedInstance = new BindConverter(conversionService,
 						propertyEditorInitializer);
-				sharedInstance = instance;
 			}
-			return instance;
+			return sharedInstance;
 		}
 		return new BindConverter(conversionService, propertyEditorInitializer);
 	}
@@ -244,12 +242,12 @@ final class BindConverter {
 		}
 
 		private PropertyEditor getPropertyEditor(Class<?> type) {
-			SimpleTypeConverter typeConverter = this.typeConverter;
 			if (type == null || type == Object.class
 					|| Collection.class.isAssignableFrom(type)
 					|| Map.class.isAssignableFrom(type)) {
 				return null;
 			}
+			SimpleTypeConverter typeConverter = this.typeConverter;
 			PropertyEditor editor = typeConverter.getDefaultEditor(type);
 			if (editor == null) {
 				editor = typeConverter.findCustomEditor(type, null);

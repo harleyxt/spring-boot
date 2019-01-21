@@ -21,13 +21,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.springframework.boot.context.properties.source.ConfigurationPropertyName.Form;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
@@ -39,42 +39,39 @@ import static org.assertj.core.api.Assertions.fail;
  */
 public class ConfigurationPropertyNameTests {
 
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
-
 	@Test
 	public void ofNameShouldNotBeNull() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("Name must not be null");
-		ConfigurationPropertyName.of(null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> ConfigurationPropertyName.of(null))
+				.withMessageContaining("Name must not be null");
 	}
 
 	@Test
 	public void ofNameShouldNotStartWithDash() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("-foo");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("-foo"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
 	public void ofNameShouldNotStartWithDot() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of(".foo");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of(".foo"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
 	public void ofNameShouldNotEndWithDot() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("foo.");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("foo."))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
 	public void ofNameShouldNotContainUppercase() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("fOo");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("fOo"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
@@ -165,23 +162,23 @@ public class ConfigurationPropertyNameTests {
 
 	@Test
 	public void ofNameWhenMissingCloseBracket() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("[bar");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("[bar"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
 	public void ofNameWhenMissingOpenBracket() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("bar]");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("bar]"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
 	public void ofNameWhenMultipleMismatchedBrackets() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("[a[[[b]ar]");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("[a[[[b]ar]"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
@@ -194,9 +191,9 @@ public class ConfigurationPropertyNameTests {
 
 	@Test
 	public void ofNameWithWhitespaceInName() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("is not valid");
-		ConfigurationPropertyName.of("foo. bar");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("foo. bar"))
+				.withMessageContaining("is not valid");
 	}
 
 	@Test
@@ -228,9 +225,9 @@ public class ConfigurationPropertyNameTests {
 
 	@Test
 	public void adaptWhenNameIsNullShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("Name must not be null");
-		ConfigurationPropertyName.adapt(null, '.');
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> ConfigurationPropertyName.adapt(null, '.'))
+				.withMessageContaining("Name must not be null");
 	}
 
 	@Test
@@ -427,16 +424,16 @@ public class ConfigurationPropertyNameTests {
 
 	@Test
 	public void appendWhenElementNameIsNotValidShouldThrowException() {
-		this.thrown.expect(InvalidConfigurationPropertyNameException.class);
-		this.thrown.expectMessage("Configuration property name '-bar' is not valid");
-		ConfigurationPropertyName.of("foo").append("-bar");
+		assertThatExceptionOfType(InvalidConfigurationPropertyNameException.class)
+				.isThrownBy(() -> ConfigurationPropertyName.of("foo").append("-bar"))
+				.withMessageContaining("Configuration property name '-bar' is not valid");
 	}
 
 	@Test
 	public void appendWhenElementNameMultiDotShouldThrowException() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("Element value 'bar.baz' must be a single item");
-		ConfigurationPropertyName.of("foo").append("bar.baz");
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> ConfigurationPropertyName.of("foo").append("bar.baz"))
+				.withMessageContaining("Element value 'bar.baz' must be a single item");
 	}
 
 	@Test
@@ -601,6 +598,35 @@ public class ConfigurationPropertyNameTests {
 		assertThat((Object) n10).isNotEqualTo(n09);
 		assertThat((Object) n12).isNotEqualTo(n13);
 		assertThat((Object) n14).isNotEqualTo(n15);
+	}
+
+	@Test
+	public void equalsWhenStartsWith() {
+		// gh-14665
+		ConfigurationPropertyName n1 = ConfigurationPropertyName.of("my.sources[0].xame");
+		ConfigurationPropertyName n2 = ConfigurationPropertyName
+				.of("my.sources[0].xamespace");
+		assertThat(n1).isNotEqualTo(n2);
+	}
+
+	@Test
+	public void equalsWhenStartsWithOfAdaptedName() {
+		// gh-15152
+		ConfigurationPropertyName n1 = ConfigurationPropertyName
+				.adapt("example.mymap.ALPHA", '.');
+		ConfigurationPropertyName n2 = ConfigurationPropertyName
+				.adapt("example.mymap.ALPHA_BRAVO", '.');
+		assertThat(n1).isNotEqualTo(n2);
+	}
+
+	@Test
+	public void equalsWhenStartsWithOfAdaptedNameOfIllegalChars() {
+		// gh-15152
+		ConfigurationPropertyName n1 = ConfigurationPropertyName
+				.adapt("example.mymap.ALPH!", '.');
+		ConfigurationPropertyName n2 = ConfigurationPropertyName
+				.adapt("example.mymap.ALPHA!BRAVO", '.');
+		assertThat(n1).isNotEqualTo(n2);
 	}
 
 	@Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import org.springframework.http.converter.support.AllEncompassingFormHttpMessage
  * {@link ApplicationListener} to trigger early initialization in a background thread of
  * time consuming tasks.
  * <p>
- * Set the {@value IGNORE_BACKGROUNDPREINITIALIZER_PROPERTY_NAME} system property to
+ * Set the {@link #IGNORE_BACKGROUNDPREINITIALIZER_PROPERTY_NAME} system property to
  * {@code true} to disable this mechanism and let such initialization happen in the
  * foreground.
  *
@@ -70,7 +70,7 @@ public class BackgroundPreinitializer
 	@Override
 	public void onApplicationEvent(SpringApplicationEvent event) {
 		if (!Boolean.getBoolean(IGNORE_BACKGROUNDPREINITIALIZER_PROPERTY_NAME)
-				&& event instanceof ApplicationStartingEvent
+				&& event instanceof ApplicationStartingEvent && multipleProcessors()
 				&& preinitializationStarted.compareAndSet(false, true)) {
 			performPreinitialization();
 		}
@@ -84,6 +84,10 @@ public class BackgroundPreinitializer
 				Thread.currentThread().interrupt();
 			}
 		}
+	}
+
+	private boolean multipleProcessors() {
+		return Runtime.getRuntime().availableProcessors() > 1;
 	}
 
 	private void performPreinitialization() {

@@ -29,7 +29,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration;
 import org.springframework.boot.test.context.assertj.AssertableReactiveWebApplicationContext;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
-import org.springframework.boot.test.rule.OutputCapture;
+import org.springframework.boot.testsupport.rule.OutputCapture;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -50,7 +50,7 @@ public class WebFluxMetricsAutoConfigurationTests {
 					AutoConfigurations.of(WebFluxMetricsAutoConfiguration.class));
 
 	@Rule
-	public OutputCapture output = new OutputCapture();
+	public final OutputCapture output = new OutputCapture();
 
 	@Test
 	public void shouldProvideWebFluxMetricsBeans() {
@@ -93,6 +93,19 @@ public class WebFluxMetricsAutoConfigurationTests {
 					assertThat(registry.get("http.server.requests").meters()).hasSize(3);
 					assertThat(this.output.toString()).doesNotContain(
 							"Reached the maximum number of URI tags for 'http.server.requests'");
+				});
+	}
+
+	@Test
+	public void metricsAreNotRecordedIfAutoTimeRequestsIsDisabled() {
+		this.contextRunner
+				.withConfiguration(AutoConfigurations.of(WebFluxAutoConfiguration.class))
+				.withUserConfiguration(TestController.class)
+				.withPropertyValues(
+						"management.metrics.web.server.auto-time-requests=false")
+				.run((context) -> {
+					MeterRegistry registry = getInitializedMeterRegistry(context);
+					assertThat(registry.find("http.server.requests").meter()).isNull();
 				});
 	}
 

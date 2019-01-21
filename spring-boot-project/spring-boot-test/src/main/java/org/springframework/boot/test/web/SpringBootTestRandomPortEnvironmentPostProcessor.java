@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,12 @@ import java.util.Objects;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.PropertySource;
 import org.springframework.test.context.support.TestPropertySourceUtils;
+import org.springframework.util.ClassUtils;
 
 /**
  * {@link EnvironmentPostProcessor} implementation to start the management context on a
@@ -29,9 +32,9 @@ import org.springframework.test.context.support.TestPropertySourceUtils;
  * different port.
  *
  * @author Madhura Bhave
- * @since 2.1.0
+ * @author Andy Wilkinson
  */
-public class SpringBootTestRandomPortEnvironmentPostProcessor
+class SpringBootTestRandomPortEnvironmentPostProcessor
 		implements EnvironmentPostProcessor {
 
 	private static final String MANAGEMENT_PORT_PROPERTY = "management.server.port";
@@ -43,36 +46,68 @@ public class SpringBootTestRandomPortEnvironmentPostProcessor
 			SpringApplication application) {
 		MapPropertySource source = (MapPropertySource) environment.getPropertySources()
 				.get(TestPropertySourceUtils.INLINED_PROPERTIES_PROPERTY_SOURCE_NAME);
-		if (isTestServerPortRandom(source)) {
-			if (source.getProperty(MANAGEMENT_PORT_PROPERTY) == null) {
-				String managementPort = getProperty(environment, MANAGEMENT_PORT_PROPERTY,
-						null);
-				if (managementPort != null && !managementPort.equals("-1")) {
-					String serverPort = getProperty(environment, SERVER_PORT_PROPERTY,
-							"8080");
-					if (!managementPort.equals(serverPort)) {
-						source.getSource().put(MANAGEMENT_PORT_PROPERTY, "0");
-					}
-					else {
-						source.getSource().put(MANAGEMENT_PORT_PROPERTY, "");
-					}
-				}
-			}
+		if (source == null || isTestServerPortFixed(source, environment)
+				|| isTestManagementPortConfigured(source)) {
+			return;
 		}
-
+		Integer managementPort = getPropertyAsInteger(environment,
+				MANAGEMENT_PORT_PROPERTY, null);
+		if (managementPort == null || managementPort.equals(-1)) {
+			return;
+		}
+		Integer serverPort = getPropertyAsInteger(environment, SERVER_PORT_PROPERTY,
+				8080);
+		if (!managementPort.equals(serverPort)) {
+			source.getSource().put(MANAGEMENT_PORT_PROPERTY, "0");
+		}
+		else {
+			source.getSource().put(MANAGEMENT_PORT_PROPERTY, "");
+		}
 	}
 
-	private boolean isTestServerPortRandom(MapPropertySource source) {
-		return (source != null && "0".equals(source.getProperty(SERVER_PORT_PROPERTY)));
+	private boolean isTestServerPortFixed(MapPropertySource source,
+			ConfigurableEnvironment environment) {
+		return !Integer.valueOf(0)
+				.equals(getPropertyAsInteger(source, SERVER_PORT_PROPERTY, environment));
 	}
 
-	private String getProperty(ConfigurableEnvironment environment, String property,
-			String defaultValue) {
+	private boolean isTestManagementPortConfigured(PropertySource<?> source) {
+		return source.getProperty(MANAGEMENT_PORT_PROPERTY) != null;
+	}
+
+	private Integer getPropertyAsInteger(ConfigurableEnvironment environment,
+			String property, Integer defaultValue) {
 		return environment.getPropertySources().stream()
 				.filter((source) -> !source.getName().equals(
 						TestPropertySourceUtils.INLINED_PROPERTIES_PROPERTY_SOURCE_NAME))
-				.map((source) -> (String) source.getProperty(property))
+				.map((source) -> getPropertyAsInteger(source, property, environment))
 				.filter(Objects::nonNull).findFirst().orElse(defaultValue);
+	}
+
+	private Integer getPropertyAsInteger(PropertySource<?> source, String property,
+			ConfigurableEnvironment environment) {
+		Object value = source.getProperty(property);
+		if (value == null) {
+			return null;
+		}
+		if (ClassUtils.isAssignableValue(Integer.class, value)) {
+			return (Integer) value;
+		}
+		try {
+			return environment.getConversionService().convert(value, Integer.class);
+		}
+		catch (ConversionFailedException ex) {
+			if (value instanceof String) {
+				return getResolvedValueIfPossible(environment, (String) value);
+			}
+			throw ex;
+		}
+	}
+
+	private Integer getResolvedValueIfPossible(ConfigurableEnvironment environment,
+			String value) {
+		String resolvedValue = environment.resolveRequiredPlaceholders(value);
+		return environment.getConversionService().convert(resolvedValue, Integer.class);
 	}
 
 }

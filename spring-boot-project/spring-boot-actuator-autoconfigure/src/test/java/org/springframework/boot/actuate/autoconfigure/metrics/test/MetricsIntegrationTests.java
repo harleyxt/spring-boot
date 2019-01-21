@@ -35,6 +35,7 @@ import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.autoconfigure.metrics.JvmMetricsAutoConfiguration;
+import org.springframework.boot.actuate.autoconfigure.metrics.LogbackMetricsAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.SystemMetricsAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.amqp.RabbitMetricsAutoConfiguration;
@@ -82,8 +83,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  *
  * @author Jon Schneider
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, classes = MetricsIntegrationTests.MetricsApp.class, properties = "management.metrics.use-global-registry=false")
+@RunWith(SpringRunner.class)
 public class MetricsIntegrationTests {
 
 	@Autowired
@@ -142,7 +143,7 @@ public class MetricsIntegrationTests {
 
 	@Configuration
 	@ImportAutoConfiguration({ MetricsAutoConfiguration.class,
-			JvmMetricsAutoConfiguration.class, LogbackMetrics.class,
+			JvmMetricsAutoConfiguration.class, LogbackMetricsAutoConfiguration.class,
 			SystemMetricsAutoConfiguration.class, RabbitMetricsAutoConfiguration.class,
 			CacheMetricsAutoConfiguration.class,
 			DataSourcePoolMetricsAutoConfiguration.class,

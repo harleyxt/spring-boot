@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2018 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.boot.devtools.restart.classloader.ClassLoaderFile;
@@ -43,6 +42,8 @@ import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -57,14 +58,11 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 public class RestarterTests {
 
 	@Rule
-	public ExpectedException thrown = ExpectedException.none();
-
-	@Rule
 	public OutputCapture out = new OutputCapture();
 
 	@Before
 	public void setup() {
-		Restarter.setInstance(new TestableRestarter());
+		RestarterInitializer.setRestarterInstance();
 	}
 
 	@After
@@ -75,9 +73,8 @@ public class RestarterTests {
 	@Test
 	public void cantGetInstanceBeforeInitialize() {
 		Restarter.clearInstance();
-		this.thrown.expect(IllegalStateException.class);
-		this.thrown.expectMessage("Restarter has not been initialized");
-		Restarter.getInstance();
+		assertThatIllegalStateException().isThrownBy(Restarter::getInstance)
+				.withMessageContaining("Restarter has not been initialized");
 	}
 
 	@Test
@@ -103,9 +100,9 @@ public class RestarterTests {
 
 	@Test
 	public void addUrlsMustNotBeNull() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("Urls must not be null");
-		Restarter.getInstance().addUrls(null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> Restarter.getInstance().addUrls(null))
+				.withMessageContaining("Urls must not be null");
 	}
 
 	@Test
@@ -122,9 +119,9 @@ public class RestarterTests {
 
 	@Test
 	public void addClassLoaderFilesMustNotBeNull() {
-		this.thrown.expect(IllegalArgumentException.class);
-		this.thrown.expectMessage("ClassLoaderFiles must not be null");
-		Restarter.getInstance().addClassLoaderFiles(null);
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> Restarter.getInstance().addClassLoaderFiles(null))
+				.withMessageContaining("ClassLoaderFiles must not be null");
 	}
 
 	@Test
@@ -271,6 +268,18 @@ public class RestarterTests {
 
 		public ClassLoader getRelaunchClassLoader() {
 			return this.relaunchClassLoader;
+		}
+
+	}
+
+	static class RestarterInitializer {
+
+		static void setRestarterInstance() {
+			main(new String[0]);
+		}
+
+		static void main(String[] args) {
+			Restarter.setInstance(new TestableRestarter());
 		}
 
 	}

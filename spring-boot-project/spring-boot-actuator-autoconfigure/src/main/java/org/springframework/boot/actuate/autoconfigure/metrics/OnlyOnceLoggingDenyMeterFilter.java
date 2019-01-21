@@ -19,18 +19,16 @@ package org.springframework.boot.actuate.autoconfigure.metrics;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.MeterFilterReply;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.springframework.util.Assert;
 
 /**
- * {@link MeterFilter} to log only once a warning message and deny a {@link Meter}
- * {@link Id}.
+ * {@link MeterFilter} to log only once a warning message and deny a {@link Id Meter.Id}.
  *
  * @author Jon Schneider
  * @author Dmytro Nosan
@@ -38,8 +36,8 @@ import org.springframework.util.Assert;
  */
 public final class OnlyOnceLoggingDenyMeterFilter implements MeterFilter {
 
-	private final Logger logger = LoggerFactory
-			.getLogger(OnlyOnceLoggingDenyMeterFilter.class);
+	private static final Log logger = LogFactory
+			.getLog(OnlyOnceLoggingDenyMeterFilter.class);
 
 	private final AtomicBoolean alreadyWarned = new AtomicBoolean(false);
 
@@ -52,9 +50,8 @@ public final class OnlyOnceLoggingDenyMeterFilter implements MeterFilter {
 
 	@Override
 	public MeterFilterReply accept(Id id) {
-		if (this.logger.isWarnEnabled()
-				&& this.alreadyWarned.compareAndSet(false, true)) {
-			this.logger.warn(this.message.get());
+		if (logger.isWarnEnabled() && this.alreadyWarned.compareAndSet(false, true)) {
+			logger.warn(this.message.get());
 		}
 		return MeterFilterReply.DENY;
 	}

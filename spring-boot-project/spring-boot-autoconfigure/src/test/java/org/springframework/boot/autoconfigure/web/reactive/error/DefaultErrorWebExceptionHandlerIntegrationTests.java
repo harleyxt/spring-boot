@@ -18,9 +18,7 @@ package org.springframework.boot.autoconfigure.web.reactive.error;
 
 import javax.validation.Valid;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import reactor.core.publisher.Mono;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -43,7 +41,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Integration tests for {@link DefaultErrorWebExceptionHandler}
@@ -62,9 +60,6 @@ public class DefaultErrorWebExceptionHandlerIntegrationTests {
 			.withPropertyValues("spring.main.web-application-type=reactive",
 					"server.port=0")
 			.withUserConfiguration(Application.class);
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	@Test
 	public void jsonError() {
@@ -189,7 +184,8 @@ public class DefaultErrorWebExceptionHandlerIntegrationTests {
 	@Test
 	public void defaultErrorView() {
 		this.contextRunner
-				.withPropertyValues("spring.mustache.prefix=classpath:/unknown/")
+				.withPropertyValues("spring.mustache.prefix=classpath:/unknown/",
+						"server.error.include-stacktrace=always")
 				.run((context) -> {
 					WebTestClient client = WebTestClient.bindToApplicationContext(context)
 							.build();
@@ -199,7 +195,8 @@ public class DefaultErrorWebExceptionHandlerIntegrationTests {
 							.contentType(MediaType.TEXT_HTML).expectBody(String.class)
 							.returnResult().getResponseBody();
 					assertThat(body).contains("Whitelabel Error Page")
-							.contains("<div>Expected!</div>");
+							.contains("<div>Expected!</div>").contains(
+									"<div style='white-space:pre-wrap;'>java.lang.IllegalStateException");
 				});
 	}
 
@@ -241,9 +238,11 @@ public class DefaultErrorWebExceptionHandlerIntegrationTests {
 		this.contextRunner.run((context) -> {
 			WebTestClient client = WebTestClient.bindToApplicationContext(context)
 					.build();
-			this.thrown.expectCause(instanceOf(IllegalStateException.class));
-			this.thrown.expectMessage("already committed!");
-			client.get().uri("/commit").exchange().expectStatus();
+			assertThatExceptionOfType(RuntimeException.class)
+					.isThrownBy(
+							() -> client.get().uri("/commit").exchange().expectStatus())
+					.withCauseInstanceOf(IllegalStateException.class)
+					.withMessageContaining("already committed!");
 		});
 	}
 
@@ -256,6 +255,43 @@ public class DefaultErrorWebExceptionHandlerIntegrationTests {
 					client.get().uri("/notfound").accept(MediaType.TEXT_HTML).exchange()
 							.expectStatus().isNotFound().expectBody().isEmpty();
 				});
+	}
+
+	@Test
+	public void exactStatusTemplateErrorPage() {
+		this.contextRunner
+				.withPropertyValues("server.error.whitelabel.enabled=false",
+						"spring.mustache.prefix=" + getErrorTemplatesLocation())
+				.run((context) -> {
+					WebTestClient client = WebTestClient.bindToApplicationContext(context)
+							.build();
+					String body = client.get().uri("/notfound")
+							.accept(MediaType.TEXT_HTML).exchange().expectStatus()
+							.isNotFound().expectBody(String.class).returnResult()
+							.getResponseBody();
+					assertThat(body).contains("404 page");
+				});
+	}
+
+	@Test
+	public void seriesStatusTemplateErrorPage() {
+		this.contextRunner
+				.withPropertyValues("server.error.whitelabel.enabled=false",
+						"spring.mustache.prefix=" + getErrorTemplatesLocation())
+				.run((context) -> {
+					WebTestClient client = WebTestClient.bindToApplicationContext(context)
+							.build();
+					String body = client.get().uri("/badRequest")
+							.accept(MediaType.TEXT_HTML).exchange().expectStatus()
+							.isBadRequest().expectBody(String.class).returnResult()
+							.getResponseBody();
+					assertThat(body).contains("4xx page");
+				});
+	}
+
+	private String getErrorTemplatesLocation() {
+		String packageName = getClass().getPackage().getName();
+		return "classpath:/" + packageName.replace('.', '/') + "/templates/";
 	}
 
 	@Test

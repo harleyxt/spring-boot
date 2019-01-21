@@ -38,15 +38,15 @@ import org.jooq.TransactionListenerProvider;
 import org.jooq.TransactionalRunnable;
 import org.jooq.VisitListener;
 import org.jooq.VisitListenerProvider;
-import org.junit.Rule;
+import org.jooq.impl.DefaultExecuteListenerProvider;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -68,9 +68,6 @@ public class JooqAutoConfigurationTests {
 	private ApplicationContextRunner contextRunner = new ApplicationContextRunner()
 			.withConfiguration(AutoConfigurations.of(JooqAutoConfiguration.class))
 			.withPropertyValues("spring.datasource.name:jooqtest");
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	@Test
 	public void noDataSource() {
@@ -155,8 +152,13 @@ public class JooqAutoConfigurationTests {
 							.isEqualTo(TestExecutorProvider.class);
 					assertThat(dsl.configuration().recordListenerProviders().length)
 							.isEqualTo(1);
-					assertThat(dsl.configuration().executeListenerProviders().length)
-							.isEqualTo(2);
+					ExecuteListenerProvider[] executeListenerProviders = dsl
+							.configuration().executeListenerProviders();
+					assertThat(executeListenerProviders.length).isEqualTo(2);
+					assertThat(executeListenerProviders[0])
+							.isInstanceOf(DefaultExecuteListenerProvider.class);
+					assertThat(executeListenerProviders[1])
+							.isInstanceOf(TestExecuteListenerProvider.class);
 					assertThat(dsl.configuration().visitListenerProviders().length)
 							.isEqualTo(1);
 					assertThat(dsl.configuration().transactionListenerProviders().length)
@@ -265,6 +267,7 @@ public class JooqAutoConfigurationTests {
 
 	}
 
+	@Order(100)
 	protected static class TestExecuteListenerProvider
 			implements ExecuteListenerProvider {
 

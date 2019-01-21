@@ -16,6 +16,8 @@
 
 package org.springframework.boot.autoconfigure.data.jdbc;
 
+import java.util.Optional;
+
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -25,18 +27,21 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.jdbc.core.convert.JdbcCustomConversions;
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 import org.springframework.data.jdbc.repository.config.JdbcConfiguration;
 import org.springframework.data.jdbc.repository.config.JdbcRepositoryConfigExtension;
+import org.springframework.data.relational.core.conversion.RelationalConverter;
+import org.springframework.data.relational.core.mapping.NamingStrategy;
+import org.springframework.data.relational.core.mapping.RelationalMappingContext;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Spring Data's JDBC Repositories.
  * <p>
  * Once in effect, the auto-configuration is the equivalent of enabling JDBC repositories
- * using the
- * {@link org.springframework.data.jdbc.repository.config.EnableJdbcRepositories}
- * annotation and providing a {@link JdbcConfiguration} subclass.
+ * using the {@link EnableJdbcRepositories} annotation and providing a
+ * {@link JdbcConfiguration} subclass.
  *
  * @author Andy Wilkinson
  * @since 2.1.0
@@ -59,6 +64,25 @@ public class JdbcRepositoriesAutoConfiguration {
 	@Configuration
 	@ConditionalOnMissingBean(JdbcConfiguration.class)
 	static class SpringBootJdbcConfiguration extends JdbcConfiguration {
+
+		// Remove these public methods when they are made
+		// public in Spring Data
+		@Override
+		public JdbcCustomConversions jdbcCustomConversions() {
+			return super.jdbcCustomConversions();
+		}
+
+		@Override
+		public RelationalMappingContext jdbcMappingContext(
+				Optional<NamingStrategy> namingStrategy) {
+			return super.jdbcMappingContext(namingStrategy);
+		}
+
+		@Override
+		public RelationalConverter relationalConverter(
+				RelationalMappingContext mappingContext) {
+			return super.relationalConverter(mappingContext);
+		}
 
 	}
 
